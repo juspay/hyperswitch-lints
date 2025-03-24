@@ -1,0 +1,10 @@
+warning: Using serde_json::to_value directly
+  --> $DIR/tovalue.rs:2:20
+   |
+LL |     let my_value = serde_json::to_value(10);
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: Use the serde utils in the common_utils crate instead
+   = note: `#[warn(use_common_serde_utils)]` on by default
+
+warning: 1 warning emitted
