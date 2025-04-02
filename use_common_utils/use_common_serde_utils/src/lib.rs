@@ -20,35 +20,36 @@ extern crate rustc_hir;
 //extern crate rustc_trait_selection;
 
 use clippy_utils::{def_path_def_ids, diagnostics::span_lint_and_help};
-use once_cell::sync::OnceCell;
 use rustc_hir::{def_id::DefId, Expr, ExprKind, QPath};
 use rustc_lint::{LateContext, LateLintPass};
 
 use std::collections::HashSet;
 
-dylint_linting::declare_late_lint! {
+dylint_linting::impl_late_lint! {
     /// ### What it does
+    /// Checks and reports usage of raw serde (de)serialization functions.
     ///
     /// ### Why is this bad?
-    ///
-    /// ### Known problems
-    ///
-    /// Remove if none.
+    /// (de)serialization should be done via ext traits implemented in common_utils to
+    /// ensure consistency across Hyperswitch
     ///
     /// ### Example
     ///
-    /// ```rust
-    /// // example code where a warning is issued
+    /// ```rust,ignore
+    /// serde_json::to_value(&my_data);
     /// ```
     ///
     /// Use instead:
     ///
-    /// ```rust
-    /// // example code that does not raise a warning
+    /// ```rust,ignore
+    /// use common_utils::ext_traits::Encode;
+    ///
+    /// my_data.encode_to_value();
     /// ```
     pub USE_COMMON_SERDE_UTILS,
     Warn,
-    "description goes here"
+    "using raw serde (de)serialization functions over common_utils ext traits",
+    UseCommonSerdeUtils::default()
 }
 
 const SERDE_JSON_FROM_STR: &[&str] = &["serde_json", "from_str"];
@@ -56,7 +57,10 @@ const SERDE_JSON_TO_STRING: &[&str] = &["serde_json", "to_string"];
 const SERDE_JSON_FROM_VALUE: &[&str] = &["serde_json", "from_value"];
 const SERDE_JSON_TO_VALUE: &[&str] = &["serde_json", "to_value"];
 
-static DEF_IDS: OnceCell<HashSet<DefId>> = OnceCell::new();
+#[derive(Default)]
+struct UseCommonSerdeUtils {
+    serde_fn_def_ids: Option<HashSet<DefId>>,
+}
 
 impl LateLintPass<'_> for UseCommonSerdeUtils {
     // A list of things you might check can be found here:
@@ -69,7 +73,7 @@ impl LateLintPass<'_> for UseCommonSerdeUtils {
             && let QPath::Resolved(_, path) = qpath
             && let Some(def_id) = path.res.opt_def_id()
         {
-            let serde_def_ids = DEF_IDS.get_or_init(|| {
+            let serde_def_ids = self.serde_fn_def_ids.get_or_insert_with(|| {
                 def_path_def_ids(cx.tcx, SERDE_JSON_FROM_STR)
                     .chain(def_path_def_ids(cx.tcx, SERDE_JSON_TO_STRING))
                     .chain(def_path_def_ids(cx.tcx, SERDE_JSON_FROM_VALUE))

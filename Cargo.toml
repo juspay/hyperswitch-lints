@@ -1,7 +1,0 @@
-[workspace]
-resolver = "2"
-members = ["lints/*"]
-
-[workspace.lints.rust.unexpected_cfgs]
-level = "warn"
-check-cfg = ["cfg(dylint_lib, values(any()))"]
